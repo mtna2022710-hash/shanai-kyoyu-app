@@ -41,9 +41,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
 .home-heading { font-size: 20px; color: var(--blue-dark); margin-bottom: 8px; }
 .home-help { font-size: 14px; color: var(--gray); margin-bottom: 20px; line-height: 1.5; }
 .home-success { text-align: center; color: var(--green); font-weight: 700; margin-top: 14px; font-size: 16px; }
-.view-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
-.toggle-btn { flex: 1; padding: 12px; font-size: 15px; font-weight: 700; border: 2px solid var(--blue); background: #fff; color: var(--blue); border-radius: var(--radius); cursor: pointer; font-family: inherit; }
-.toggle-btn.active { background: var(--blue); color: #fff; }
 .month-block { margin-bottom: 28px; }
 .month-title { font-size: 18px; font-weight: 700; color: var(--blue-dark); margin-bottom: 10px; padding-left: 4px; }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
@@ -56,11 +53,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
 .cal-cell.today .cal-date { color: var(--orange); }
 .cal-event { background: var(--blue-light); color: var(--blue-dark); border-radius: 5px; padding: 2px 4px; margin-top: 2px; font-size: 11px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .cal-event.read-done { background: #d1fae5; color: var(--green); }
-.list-item { background: #fff; border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.06); cursor: pointer; border-left: 5px solid var(--text); }
-.list-item.read-done { border-left-color: var(--green); }
-.list-date { font-size: 13px; color: var(--blue); font-weight: 700; }
-.list-comment { font-size: 16px; margin: 4px 0; }
-.list-meta { font-size: 12px; color: var(--gray); display: flex; justify-content: space-between; }
 .read-badge { color: var(--green); font-weight: 700; }
 .empty-msg { text-align: center; color: var(--gray); padding: 40px 20px; font-size: 15px; }
 .notice-item { background: #fff; border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.06); cursor: pointer; border-left: 5px solid var(--text); }
@@ -135,14 +127,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
         <p id="home-success" class="home-success hidden">✅ 登録しました！</p>
       </div>
     </section>
-    <!-- スケジュール -->
+    <!-- スケジュール（カレンダー表示） -->
     <section id="tab-schedule" class="tab-panel hidden">
-      <div class="view-toggle">
-        <button id="toggle-calendar" class="toggle-btn active">📅 カレンダー</button>
-        <button id="toggle-list" class="toggle-btn">📝 リスト</button>
-      </div>
       <div id="schedule-calendar"></div>
-      <div id="schedule-list" class="hidden"></div>
     </section>
     <!-- 業務連絡 -->
     <section id="tab-notice" class="tab-panel hidden">
@@ -407,18 +394,7 @@ function switchTab(tab) {
 // ============================================================
 //  スケジュール
 // ============================================================
-let scheduleView = "calendar";
-$("toggle-calendar").addEventListener("click", () => setScheduleView("calendar"));
-$("toggle-list").addEventListener("click", () => setScheduleView("list"));
-function setScheduleView(v) {
-  scheduleView = v;
-  $("toggle-calendar").classList.toggle("active", v === "calendar");
-  $("toggle-list").classList.toggle("active", v === "list");
-  $("schedule-calendar").classList.toggle("hidden", v !== "calendar");
-  $("schedule-list").classList.toggle("hidden", v !== "list");
-  renderSchedule();
-}
-function renderSchedule() { scheduleView === "calendar" ? renderCalendar() : renderScheduleList(); }
+function renderSchedule() { renderCalendar(); }
 
 function renderCalendar() {
   const wrap = $("schedule-calendar");
@@ -466,22 +442,6 @@ function buildMonthCalendar(base) {
   block.appendChild(grid); return block;
 }
 
-function renderScheduleList() {
-  const wrap = $("schedule-list"); wrap.innerHTML = "";
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 3, 0);
-  const inRange = entries.filter((e) => { const d = new Date(e.date); return d >= start && d <= end; })
-                         .sort((a, b) => a.date.localeCompare(b.date));
-  if (inRange.length === 0) { wrap.innerHTML = `<div class="empty-msg">表示する予定はありません。<br>ホームタブから登録できます。</div>`; return; }
-  inRange.forEach((e) => {
-    const item = document.createElement("div");
-    item.className = "list-item" + (isReadByMe(e) ? " read-done" : "");
-    item.innerHTML = `<div class="list-date">${formatDateJp(e.date)}</div><div class="list-comment">${escapeHtml(e.comment)}</div><div class="list-meta"><span>入力：${escapeHtml(e.authorName)}</span><span class="${isReadByMe(e) ? "read-badge" : ""}">${readSummary(e)}</span></div>`;
-    item.addEventListener("click", () => openModal(e));
-    wrap.appendChild(item);
-  });
-}
 
 // ============================================================
 //  業務連絡
