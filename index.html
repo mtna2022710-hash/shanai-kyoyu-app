@@ -307,10 +307,31 @@ function requestNotificationPermission() {
   }
 }
 
-// 自分宛の未読件数（自分が入力したものは除く）
+// ---- コメント既読管理（この端末で最後に見た件数を記録） ----
+function seenKey() { return "seenComments_" + (currentUser?.uid || ""); }
+function getSeenMap() {
+  try { return JSON.parse(localStorage.getItem(seenKey()) || "{}"); } catch (e) { return {}; }
+}
+function markCommentsSeen(entry) {
+  if (!currentUser) return;
+  const map = getSeenMap();
+  map[entry.id] = (entry.comments || []).length;
+  try { localStorage.setItem(seenKey(), JSON.stringify(map)); } catch (e) {}
+  updateAppBadge();
+}
+// 未確認コメント（他人のコメントで、まだ開いて見ていないもの）があるか
+function hasUnseenComments(entry) {
+  const comments = entry.comments || [];
+  const seen = getSeenMap()[entry.id] || 0;
+  return comments.slice(seen).some((c) => c.uid !== currentUser?.uid);
+}
+
+// 自分宛の未読件数（未読タスク＋未確認コメントのあるタスク）
 function unreadCountForMe() {
   if (!currentUser) return 0;
-  return entries.filter((e) => e.authorUid !== currentUser.uid && !isReadByMe(e)).length;
+  return entries.filter((e) =>
+    (e.authorUid !== currentUser.uid && !isReadByMe(e)) || hasUnseenComments(e)
+  ).length;
 }
 
 // アプリアイコンの赤丸バッジを更新（対応端末のみ）
@@ -322,28 +343,26 @@ function updateAppBadge() {
   }
 }
 
-// 新規入力のポップアップ通知
-function notifyNewEntry(entry) {
+// ポップアップ通知（スマホはService Worker経由、PCは直接）
+function showNotify(title, body, tag) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
-  try {
-    new Notification("新しい業務連絡", {
-      body: entry.authorName + "さん：" + entry.comment,
-      icon: "icon-192.png",
-      tag: entry.id,
-    });
-  } catch (e) {}
+  const opts = { body, icon: "icon-192.png", badge: "icon-192.png", tag };
+  const fallback = () => { try { new Notification(title, opts); } catch (e) {} };
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.getRegistration()
+      .then((reg) => { if (reg) reg.showNotification(title, opts).catch(fallback); else fallback(); })
+      .catch(fallback);
+  } else {
+    fallback();
+  }
 }
 
-// 新規コメントのポップアップ通知
+function notifyNewEntry(entry) {
+  showNotify("新しい業務連絡", entry.authorName + "さん：" + entry.comment, entry.id);
+}
+
 function notifyNewComment(entry, c) {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
-  try {
-    new Notification("💬 コメントが届きました", {
-      body: c.name + "さん：" + c.text + "\n（" + entry.comment + "）",
-      icon: "icon-192.png",
-      tag: entry.id + "-c" + (entry.comments || []).length,
-    });
-  } catch (e) {}
+  showNotify("💬 コメントが届きました", c.name + "さん：" + c.text + "（" + entry.comment + "）", entry.id + "-c" + (entry.comments || []).length);
 }
 
 // ============================================================
@@ -393,6 +412,7 @@ function startListening() {
         }
         renderReadList(updated);
         renderComments(updated);
+        markCommentsSeen(updated);
       }
     }
   });
@@ -516,6 +536,7 @@ function openModal(entry) {
   $("modal-edit").classList.add("hidden");
   renderReadList(entry);
   renderComments(entry);
+  markCommentsSeen(entry);
   $("comment-input").value = "";
   $("modal").classList.remove("hidden");
 }

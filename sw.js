@@ -1,12 +1,9 @@
 // シンプルなサービスワーカー（PWAインストール対応）
 // 方式：ネットワーク優先（オンライン時は常に最新を取得、オフライン時のみキャッシュ）
-const CACHE = "shanai-app-v2";
+const CACHE = "shanai-app-v3";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./app.js",
-  "./firebase-config.js",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
@@ -27,11 +24,10 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
-  // Firebase等の通信はそのままネットワークへ
+  // FirebaseのAPI通信は常にネットワークへ
   if (e.request.url.includes("firebase") || e.request.url.includes("googleapis") || e.request.url.includes("gstatic")) {
     return;
   }
-  // ネットワーク優先：最新を取得し、取れた場合はキャッシュも更新。失敗時のみキャッシュ。
   e.respondWith(
     fetch(e.request)
       .then((res) => {
@@ -40,5 +36,16 @@ self.addEventListener("fetch", (e) => {
         return res;
       })
       .catch(() => caches.match(e.request))
+  );
+});
+
+// 通知をタップしたらアプリを開く／前面にする
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) { if ("focus" in c) return c.focus(); }
+      return clients.openWindow("./");
+    })
   );
 });
