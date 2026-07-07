@@ -1,6 +1,6 @@
 // シンプルなサービスワーカー（PWAインストール対応）
 // 方式：ネットワーク優先（オンライン時は常に最新を取得、オフライン時のみキャッシュ）
-const CACHE = "shanai-app-v3";
+const CACHE = "shanai-app-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -37,6 +37,32 @@ self.addEventListener("fetch", (e) => {
       })
       .catch(() => caches.match(e.request))
   );
+});
+
+// ---- サーバーからのプッシュ受信（アプリが閉じていてもOSが起動してくれる）----
+self.addEventListener("push", (e) => {
+  let payload = {};
+  try { payload = e.data.json(); } catch (err) {}
+  const d = payload.data || {};
+  const title = d.title || "社内共有アプリ";
+  const body = d.body || "";
+  e.waitUntil((async () => {
+    await self.registration.showNotification(title, {
+      body,
+      icon: "icon-192.png",
+      badge: "icon-192.png",
+      tag: d.tag || undefined,
+    });
+    // アイコンバッジを+1（アプリを開くと正確な数に再計算されます）
+    try {
+      const c = await caches.open("badge-count");
+      const res = await c.match("./badge");
+      let count = res ? parseInt(await res.text(), 10) || 0 : 0;
+      count++;
+      await c.put("./badge", new Response(String(count)));
+      if (self.navigator && self.navigator.setAppBadge) await self.navigator.setAppBadge(count);
+    } catch (err) {}
+  })());
 });
 
 // 通知をタップしたらアプリを開く／前面にする

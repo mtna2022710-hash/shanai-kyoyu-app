@@ -35,5 +35,13 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && resource.data.authorUid == request.auth.uid;
     }
+
+    // プッシュ通知の宛先トークン（各端末が自分の分だけ登録）
+    match /fcmTokens/{token} {
+      allow read: if false;
+      allow create, update: if request.auth != null
+                            && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null;
+    }
   }
 }

@@ -198,8 +198,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, query, orderBy, onSnapshot,
-  doc, updateDoc, arrayUnion, serverTimestamp
+  doc, updateDoc, setDoc, arrayUnion, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+
+// Web Push証明書の公開鍵（FirebaseコンソールのVAPIDキー）
+const VAPID_KEY = "BJ6uU3rIURgmR6kdGMfkftF1Zh427taLasKki9wRuZ9Rwx-b61UYhduR4zG3RvJsFVpVrk1xwjO6h9_FYWfWQhc";
 
 // ---- Firebase設定 ----
 const firebaseConfig = {
@@ -303,8 +307,31 @@ onAuthStateChanged(auth, (user) => {
 function requestNotificationPermission() {
   if (!("Notification" in window)) return;
   if (Notification.permission === "default") {
-    Notification.requestPermission().catch(() => {});
+    Notification.requestPermission().then(() => registerPush()).catch(() => {});
+  } else if (Notification.permission === "granted") {
+    registerPush();
   }
+}
+
+// サーバー経由プッシュ（FCM）の受信登録：この端末のトークンを保存
+async function registerPush() {
+  if (!currentUser) return;
+  if (!("serviceWorker" in navigator) || !("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+  if (!VAPID_KEY || VAPID_KEY.startsWith("ここに")) return;
+  try {
+    const reg = await navigator.serviceWorker.register("sw.js");
+    await navigator.serviceWorker.ready;
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    if (token) {
+      await setDoc(doc(db, "fcmTokens", token), {
+        uid: currentUser.uid,
+        name: currentUser.name,
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (e) { console.log("プッシュ登録に失敗:", e); }
 }
 
 // ---- コメント既読管理（この端末で最後に見た件数を記録） ----
@@ -340,6 +367,10 @@ function updateAppBadge() {
   if (navigator.setAppBadge) {
     if (n > 0) navigator.setAppBadge(n).catch(() => {});
     else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+  }
+  // プッシュ受信側の簡易カウンタを正確な数にリセット
+  if ("caches" in window) {
+    caches.open("badge-count").then((c) => c.put("./badge", new Response(String(n)))).catch(() => {});
   }
 }
 
