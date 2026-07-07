@@ -79,6 +79,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
 .read-chip { background: #d1fae5; color: var(--green); font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
 .read-none { color: var(--gray); font-size: 13px; }
 .btn-read-done { background: var(--green) !important; }
+.comment-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.comment-item { background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+.comment-meta { font-size: 12px; color: var(--gray); display: flex; justify-content: space-between; margin-bottom: 2px; }
+.comment-name { font-weight: 700; color: var(--blue-dark); }
+.comment-text { font-size: 15px; line-height: 1.5; word-break: break-word; }
+.comment-none { color: var(--gray); font-size: 13px; margin-bottom: 12px; }
+.comment-input-row { display: flex; gap: 8px; align-items: flex-start; }
+.comment-input { flex: 1; margin-bottom: 0; font-size: 15px; padding: 12px 14px; }
+.btn-send-comment { flex-shrink: 0; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; padding: 12px 18px; cursor: pointer; font-family: inherit; }
+.btn-send-comment:active { background: var(--blue-dark); }
+.notice-comment-count { color: var(--blue); font-weight: 700; }
   </style>
 </head>
 <body>
@@ -165,6 +176,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
       <button id="btn-read" class="btn-primary btn-large">✓ 確認しました（既読）</button>
       <div class="read-list-title">既読した人</div>
       <div id="read-list" class="read-list"></div>
+    </div>
+    <hr class="modal-hr" />
+    <div class="comment-section">
+      <div class="read-list-title">💬 コメント</div>
+      <div id="comment-list" class="comment-list"></div>
+      <div class="comment-input-row">
+        <input type="text" id="comment-input" class="input comment-input" placeholder="コメントを書く…" />
+        <button id="btn-send-comment" class="btn-send-comment">送信</button>
+      </div>
     </div>
     <button id="btn-close-modal" class="btn-ghost btn-large">閉じる</button>
   </div>
@@ -314,6 +334,18 @@ function notifyNewEntry(entry) {
   } catch (e) {}
 }
 
+// 新規コメントのポップアップ通知
+function notifyNewComment(entry, c) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    new Notification("💬 コメントが届きました", {
+      body: c.name + "さん：" + c.text + "\n（" + entry.comment + "）",
+      icon: "icon-192.png",
+      tag: entry.id + "-c" + (entry.comments || []).length,
+    });
+  } catch (e) {}
+}
+
 // ============================================================
 //  データ購読
 // ============================================================
@@ -322,13 +354,24 @@ function startListening() {
   initialLoaded = false;
   const q = query(collection(db, "entries"), orderBy("createdAt", "desc"));
   unsubscribe = onSnapshot(q, (snap) => {
-    // 初回読込後の「新規追加」だけ通知（自分の入力は除く）
+    // 初回読込後の「新規追加・新規コメント」だけ通知（自分の操作は除く）
     if (initialLoaded) {
       snap.docChanges().forEach((ch) => {
+        const data = ch.doc.data();
         if (ch.type === "added") {
-          const data = ch.doc.data();
           if (data.authorUid !== currentUser?.uid) {
             notifyNewEntry({ id: ch.doc.id, ...data });
+          }
+        } else if (ch.type === "modified") {
+          // コメントが増えていたら通知（最後のコメントが自分以外の場合）
+          const prev = entries.find((e) => e.id === ch.doc.id);
+          const prevN = (prev?.comments || []).length;
+          const newComments = data.comments || [];
+          if (newComments.length > prevN) {
+            const latest = newComments[newComments.length - 1];
+            if (latest.uid !== currentUser?.uid) {
+              notifyNewComment({ id: ch.doc.id, ...data }, latest);
+            }
           }
         }
       });
@@ -349,6 +392,7 @@ function startListening() {
           $("modal-comment").textContent = updated.comment;
         }
         renderReadList(updated);
+        renderComments(updated);
       }
     }
   });
@@ -370,6 +414,7 @@ $("btn-submit").addEventListener("click", async () => {
       authorUid: currentUser.uid,
       authorName: currentUser.name,
       reads: [],
+      comments: [],
       createdAt: serverTimestamp(),
     });
     $("home-comment").value = "";
@@ -452,7 +497,7 @@ function renderNotice() {
   entries.forEach((e) => {
     const item = document.createElement("div");
     item.className = "notice-item" + (isReadByMe(e) ? " read-done" : "");
-    item.innerHTML = `<div class="notice-top"><span class="notice-author">${escapeHtml(e.authorName)}</span><span>${formatTimestamp(e.createdAt)}</span></div><div class="notice-comment">${escapeHtml(e.comment)}</div><div class="notice-bottom"><span>対象日：${formatDateJp(e.date)}</span><span class="${isReadByMe(e) ? "read-badge" : ""}">${readSummary(e)}</span></div>`;
+    item.innerHTML = `<div class="notice-top"><span class="notice-author">${escapeHtml(e.authorName)}</span><span>${formatTimestamp(e.createdAt)}</span></div><div class="notice-comment">${escapeHtml(e.comment)}</div><div class="notice-bottom"><span>対象日：${formatDateJp(e.date)}</span><span>${(e.comments || []).length > 0 ? `<span class="notice-comment-count">💬 ${(e.comments || []).length}</span>　` : ""}<span class="${isReadByMe(e) ? "read-badge" : ""}">${readSummary(e)}</span></span></div>`;
     item.addEventListener("click", () => openModal(e));
     wrap.appendChild(item);
   });
@@ -470,6 +515,8 @@ function openModal(entry) {
   $("modal-view").classList.remove("hidden");
   $("modal-edit").classList.add("hidden");
   renderReadList(entry);
+  renderComments(entry);
+  $("comment-input").value = "";
   $("modal").classList.remove("hidden");
 }
 
@@ -513,6 +560,46 @@ $("btn-read").addEventListener("click", async () => {
     await updateDoc(doc(db, "entries", activeModalEntry.id), { reads: arrayUnion({ uid: currentUser.uid, name: currentUser.name }) });
   } catch (e) { alert("既読の登録に失敗しました：" + e.message); }
 });
+
+// ---- コメント ----
+function renderComments(entry) {
+  const list = $("comment-list"); list.innerHTML = "";
+  const comments = entry.comments || [];
+  if (comments.length === 0) {
+    list.innerHTML = `<div class="comment-none">まだコメントはありません</div>`;
+    return;
+  }
+  comments.forEach((c) => {
+    const item = document.createElement("div");
+    item.className = "comment-item";
+    item.innerHTML = `<div class="comment-meta"><span class="comment-name">${escapeHtml(c.name)}</span><span>${formatCommentTime(c.at)}</span></div><div class="comment-text">${escapeHtml(c.text)}</div>`;
+    list.appendChild(item);
+  });
+}
+
+function formatCommentTime(at) {
+  if (!at) return "";
+  const d = new Date(at);
+  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+$("btn-send-comment").addEventListener("click", sendComment);
+$("comment-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); sendComment(); } });
+
+async function sendComment() {
+  if (!activeModalEntry) return;
+  const text = $("comment-input").value.trim();
+  if (!text) return;
+  const btn = $("btn-send-comment");
+  btn.disabled = true;
+  try {
+    await updateDoc(doc(db, "entries", activeModalEntry.id), {
+      comments: arrayUnion({ uid: currentUser.uid, name: currentUser.name, text, at: Date.now() }),
+    });
+    $("comment-input").value = "";
+  } catch (e) { alert("コメントの送信に失敗しました：" + e.message); }
+  btn.disabled = false;
+}
 
 $("btn-close-modal").addEventListener("click", () => { $("modal").classList.add("hidden"); activeModalEntry = null; });
 $("modal").addEventListener("click", (e) => { if (e.target === $("modal")) { $("modal").classList.add("hidden"); activeModalEntry = null; } });
