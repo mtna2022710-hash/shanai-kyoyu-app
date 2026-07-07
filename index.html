@@ -347,13 +347,15 @@ function updateAppBadge() {
 function showNotify(title, body, tag) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
   const opts = { body, icon: "icon-192.png", badge: "icon-192.png", tag };
-  const fallback = () => { try { new Notification(title, opts); } catch (e) {} };
-  if (navigator.serviceWorker) {
-    navigator.serviceWorker.getRegistration()
-      .then((reg) => { if (reg) reg.showNotification(title, opts).catch(fallback); else fallback(); })
-      .catch(fallback);
-  } else {
-    fallback();
+  // まず従来方式（直接通知）。使えない端末（Android等）はService Worker経由で。
+  try {
+    new Notification(title, opts);
+  } catch (err) {
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.getRegistration()
+        .then((reg) => { if (reg) { try { reg.showNotification(title, opts); } catch (e) {} } })
+        .catch(() => {});
+    }
   }
 }
 
