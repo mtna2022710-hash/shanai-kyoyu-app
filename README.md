@@ -83,17 +83,20 @@ python3 -m http.server 8000
 
 ### 本番公開（全員で使う）
 
-無料で公開できる **Firebase Hosting** がおすすめです：
+**GitHub Pages で公開済みです** 👇
+
+🔗 **https://mtna2022710-hash.github.io/shanai-kyoyu-app/**
+
+このURLを社員に共有すればOK。
+スマホでURLを開き「ホーム画面に追加」すると、アプリのように使えます。
+
+コードを更新したときは、変更をコミット＆プッシュすれば1〜2分で自動的に反映されます：
 
 ```bash
-npm install -g firebase-tools
-firebase login
-firebase init hosting   # 公開フォルダはこのフォルダを指定
-firebase deploy
+git add -A
+git commit -m "更新内容のメモ"
+git push
 ```
-
-公開後に発行されるURL（例：`https://xxx.web.app`）を社員に共有すればOK。
-スマホでURLを開き「ホーム画面に追加」すると、アプリのように使えます。
 
 ---
 
