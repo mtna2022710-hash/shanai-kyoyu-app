@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#2563a8" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>社内共有アプリ</title>
+  <style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+:root {
+  --blue: #2563a8; --blue-dark: #1a3a5c; --blue-light: #dbeafe;
+  --bg: #f4f6fa; --card: #ffffff; --text: #1f2937; --gray: #6b7280;
+  --line: #e5e7eb; --green: #16a34a; --orange: #d97706; --red: #dc2626;
+  --radius: 14px;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.6; }
+.hidden { display: none !important; }
+.input { width: 100%; padding: 14px 16px; font-size: 17px; border: 2px solid var(--line); border-radius: var(--radius); background: #fff; margin-bottom: 16px; outline: none; transition: border-color .2s; font-family: inherit; }
+.input:focus { border-color: var(--blue); }
+.textarea { resize: vertical; min-height: 90px; }
+.field-label { display: block; font-size: 15px; font-weight: 700; color: var(--blue-dark); margin-bottom: 6px; }
+.btn-primary { width: 100%; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); font-size: 18px; font-weight: 700; padding: 16px; cursor: pointer; transition: background .2s; font-family: inherit; }
+.btn-primary:active { background: var(--blue-dark); }
+.btn-ghost { width: 100%; background: #fff; color: var(--blue); border: 2px solid var(--blue); border-radius: var(--radius); font-size: 16px; font-weight: 700; padding: 14px; margin-top: 12px; cursor: pointer; font-family: inherit; }
+.btn-link { display: block; width: 100%; background: none; border: none; color: var(--gray); font-size: 14px; text-decoration: underline; padding: 14px 0 2px; margin-top: 6px; cursor: pointer; font-family: inherit; }
+.login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: linear-gradient(160deg, var(--blue) 0%, var(--blue-dark) 100%); }
+.login-card { background: #fff; border-radius: 20px; padding: 32px 24px; width: 100%; max-width: 400px; box-shadow: 0 12px 40px rgba(0,0,0,.2); }
+.login-logo { font-size: 48px; text-align: center; }
+.login-title { text-align: center; color: var(--blue-dark); font-size: 24px; margin: 8px 0 4px; }
+.login-sub { text-align: center; color: var(--gray); font-size: 14px; margin-bottom: 24px; }
+.login-error { color: var(--red); font-size: 14px; min-height: 20px; margin-bottom: 8px; text-align: center; }
+.app-screen { min-height: 100vh; padding-bottom: 80px; }
+.app-header { position: sticky; top: 0; z-index: 10; background: var(--blue); color: #fff; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+.header-title { font-size: 19px; font-weight: 700; flex-shrink: 0; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.header-user { font-size: 16px; font-weight: 700; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+.app-main { padding: 20px 16px; max-width: 700px; margin: 0 auto; }
+.home-card { background: var(--card); border-radius: var(--radius); padding: 24px 20px; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+.home-heading { font-size: 20px; color: var(--blue-dark); margin-bottom: 8px; }
+.home-help { font-size: 14px; color: var(--gray); margin-bottom: 20px; line-height: 1.5; }
+.home-success { text-align: center; color: var(--green); font-weight: 700; margin-top: 14px; font-size: 16px; }
+.view-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+.toggle-btn { flex: 1; padding: 12px; font-size: 15px; font-weight: 700; border: 2px solid var(--blue); background: #fff; color: var(--blue); border-radius: var(--radius); cursor: pointer; font-family: inherit; }
+.toggle-btn.active { background: var(--blue); color: #fff; }
+.month-block { margin-bottom: 28px; }
+.month-title { font-size: 18px; font-weight: 700; color: var(--blue-dark); margin-bottom: 10px; padding-left: 4px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.cal-head { background: var(--blue-light); text-align: center; font-size: 12px; font-weight: 700; padding: 6px 0; color: var(--blue-dark); }
+.cal-head.sun { color: var(--red); } .cal-head.sat { color: var(--blue); }
+.cal-cell { background: #fff; min-height: 64px; padding: 4px; font-size: 12px; cursor: pointer; }
+.cal-cell.empty { background: #fafafa; cursor: default; }
+.cal-cell.today { background: #fffbe6; }
+.cal-date { font-size: 12px; font-weight: 700; color: var(--gray); }
+.cal-cell.today .cal-date { color: var(--orange); }
+.cal-event { background: var(--blue-light); color: var(--blue-dark); border-radius: 5px; padding: 2px 4px; margin-top: 2px; font-size: 11px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cal-event.read-done { background: #d1fae5; color: var(--green); }
+.list-item { background: #fff; border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.06); cursor: pointer; border-left: 5px solid var(--text); }
+.list-item.read-done { border-left-color: var(--green); }
+.list-date { font-size: 13px; color: var(--blue); font-weight: 700; }
+.list-comment { font-size: 16px; margin: 4px 0; }
+.list-meta { font-size: 12px; color: var(--gray); display: flex; justify-content: space-between; }
+.read-badge { color: var(--green); font-weight: 700; }
+.empty-msg { text-align: center; color: var(--gray); padding: 40px 20px; font-size: 15px; }
+.notice-item { background: #fff; border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.06); cursor: pointer; border-left: 5px solid var(--text); }
+.notice-item.read-done { border-left-color: var(--green); }
+.notice-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--gray); margin-bottom: 4px; }
+.notice-author { font-weight: 700; color: var(--blue-dark); }
+.notice-comment { font-size: 16px; }
+.notice-bottom { margin-top: 6px; font-size: 12px; display: flex; justify-content: space-between; }
+.tabbar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #fff; border-top: 1px solid var(--line); z-index: 20; box-shadow: 0 -2px 10px rgba(0,0,0,.06); }
+.tab-btn { flex: 1; background: none; border: none; padding: 8px 0 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--gray); font-family: inherit; }
+.tab-btn.active { color: var(--blue); }
+.tab-icon { font-size: 22px; }
+.tab-label { font-size: 11px; font-weight: 700; }
+.btn-logout { flex-shrink: 0; background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.6); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btn-logout:active { background: rgba(255,255,255,.35); }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+.modal-card { background: #fff; border-radius: 18px; padding: 24px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; }
+.modal-date { font-size: 14px; color: var(--blue); font-weight: 700; }
+.modal-comment { font-size: 19px; margin: 10px 0; line-height: 1.5; }
+.modal-author { font-size: 13px; color: var(--gray); }
+.modal-hr { border: none; border-top: 1px solid var(--line); margin: 18px 0; }
+.read-list-title { font-size: 13px; font-weight: 700; color: var(--gray); margin: 16px 0 8px; }
+.read-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.read-chip { background: #d1fae5; color: var(--green); font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+.read-none { color: var(--gray); font-size: 13px; }
+.btn-read-done { background: var(--green) !important; }
+  </style>
+</head>
+<body>
+
+<!-- ===== ログイン画面 ===== -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">📋</div>
+    <h1 class="login-title">社内共有アプリ</h1>
+    <p class="login-sub">スケジュール・業務連絡をみんなで共有</p>
+    <div id="login-form">
+      <label class="field-label">お名前</label>
+      <input type="text" id="login-name" class="input" placeholder="例：田中 太郎" autocomplete="name" />
+      <label class="field-label">メールアドレス</label>
+      <input type="email" id="login-email" class="input" placeholder="例：tanaka@example.com" autocomplete="email" />
+      <label class="field-label">パスワード</label>
+      <input type="password" id="login-password" class="input" placeholder="6文字以上" autocomplete="current-password" />
+      <p id="login-error" class="login-error"></p>
+      <button id="btn-login" class="btn-primary btn-large">ログイン</button>
+      <button id="btn-signup" class="btn-ghost btn-large">はじめての方はこちら（新規登録）</button>
+      <button id="btn-reset" class="btn-link">パスワードを忘れた方はこちら</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== メインアプリ ===== -->
+<div id="app-screen" class="app-screen hidden">
+  <header class="app-header">
+    <span class="header-title" id="header-title">ホーム</span>
+    <div class="header-right">
+      <span class="header-user" id="header-user"></span>
+      <button id="btn-logout" class="btn-logout">ログアウト</button>
+    </div>
+  </header>
+  <main class="app-main">
+    <!-- ホーム -->
+    <section id="tab-home" class="tab-panel">
+      <div class="home-card">
+        <h2 class="home-heading">新しい予定・連絡を入力</h2>
+        <p class="home-help">日付を選んでコメントを書くだけ。<br>スケジュールと業務連絡に自動で反映されます。</p>
+        <label class="field-label">📅 日付</label>
+        <input type="date" id="home-date" class="input" />
+        <label class="field-label">✏️ コメント</label>
+        <textarea id="home-comment" class="input textarea" rows="4" placeholder="例：10時から定例会議（A会議室）"></textarea>
+        <button id="btn-submit" class="btn-primary btn-large">登録する</button>
+        <p id="home-success" class="home-success hidden">✅ 登録しました！</p>
+      </div>
+    </section>
+    <!-- スケジュール -->
+    <section id="tab-schedule" class="tab-panel hidden">
+      <div class="view-toggle">
+        <button id="toggle-calendar" class="toggle-btn active">📅 カレンダー</button>
+        <button id="toggle-list" class="toggle-btn">📝 リスト</button>
+      </div>
+      <div id="schedule-calendar"></div>
+      <div id="schedule-list" class="hidden"></div>
+    </section>
+    <!-- 業務連絡 -->
+    <section id="tab-notice" class="tab-panel hidden">
+      <div id="notice-list"></div>
+    </section>
+  </main>
+  <nav class="tabbar">
+    <button class="tab-btn active" data-tab="home"><span class="tab-icon">🏠</span><span class="tab-label">ホーム</span></button>
+    <button class="tab-btn" data-tab="schedule"><span class="tab-icon">📅</span><span class="tab-label">スケジュール</span></button>
+    <button class="tab-btn" data-tab="notice"><span class="tab-icon">📢</span><span class="tab-label">業務連絡</span></button>
+  </nav>
+</div>
+
+<!-- ===== モーダル ===== -->
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <div id="modal-view">
+      <div class="modal-date" id="modal-date"></div>
+      <div class="modal-comment" id="modal-comment"></div>
+      <div class="modal-author" id="modal-author"></div>
+      <button id="btn-edit" class="btn-ghost btn-large hidden">✏️ 編集する</button>
+    </div>
+    <div id="modal-edit" class="hidden">
+      <label class="field-label">📅 日付</label>
+      <input type="date" id="edit-date" class="input" />
+      <label class="field-label">✏️ コメント</label>
+      <textarea id="edit-comment" class="input textarea" rows="4"></textarea>
+      <button id="btn-save-edit" class="btn-primary btn-large">保存する</button>
+      <button id="btn-cancel-edit" class="btn-ghost btn-large">キャンセル</button>
+    </div>
+    <hr class="modal-hr" />
+    <div class="modal-read-section">
+      <button id="btn-read" class="btn-primary btn-large">✓ 確認しました（既読）</button>
+      <div class="read-list-title">既読した人</div>
+      <div id="read-list" class="read-list"></div>
+    </div>
+    <button id="btn-close-modal" class="btn-ghost btn-large">閉じる</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, query, orderBy, onSnapshot,
+  doc, updateDoc, arrayUnion, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ---- Firebase設定 ----
+const firebaseConfig = {
+  apiKey: "AIzaSyDcoWiNRjbdM1pR1oEJvsZNFCkpagBoc1U",
+  authDomain: "shanaikyouyuu-app.firebaseapp.com",
+  projectId: "shanaikyouyuu-app",
+  storageBucket: "shanaikyouyuu-app.firebasestorage.app",
+  messagingSenderId: "1010408099341",
+  appId: "1:1010408099341:web:0df31b9f98878a95e74f44"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
+let entries = [];
+let unsubscribe = null;
+let activeModalEntry = null;
+
+const $ = (id) => document.getElementById(id);
+
+// ============================================================
+//  認証
+// ============================================================
+$("btn-signup").addEventListener("click", async () => {
+  const name = $("login-name").value.trim();
+  const email = $("login-email").value.trim();
+  const password = $("login-password").value;
+  if (!name)  return showLoginError("お名前を入力してください");
+  if (!email) return showLoginError("メールアドレスを入力してください");
+  if (password.length < 6) return showLoginError("パスワードは6文字以上で入力してください");
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(cred.user, { displayName: name });
+    if (currentUser) {
+      currentUser.name = name;
+      $("header-user").textContent = name + " さん";
+    }
+  } catch (e) { showLoginError(translateError(e.code)); }
+});
+
+$("btn-login").addEventListener("click", async () => {
+  const email = $("login-email").value.trim();
+  const password = $("login-password").value;
+  if (!email) return showLoginError("メールアドレスを入力してください");
+  if (!password) return showLoginError("パスワードを入力してください");
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (e) { showLoginError(translateError(e.code)); }
+});
+
+$("btn-reset").addEventListener("click", async () => {
+  const email = $("login-email").value.trim();
+  if (!email) return showLoginError("パスワード再設定には、まずメールアドレスを入力してください");
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showLoginError("");
+    alert("パスワード再設定メールを送信しました。\nメールのリンクから新しいパスワードを設定してください。\n（迷惑メールフォルダもご確認ください）");
+  } catch (e) { showLoginError(translateError(e.code)); }
+});
+
+$("btn-logout").addEventListener("click", () => signOut(auth));
+
+function showLoginError(msg) { $("login-error").textContent = msg; }
+
+function translateError(code) {
+  const map = {
+    "auth/email-already-in-use": "このメールアドレスは既に登録されています。ログインしてください。",
+    "auth/invalid-email": "メールアドレスの形式が正しくありません。",
+    "auth/weak-password": "パスワードは6文字以上にしてください。",
+    "auth/user-not-found": "ユーザーが見つかりません。新規登録してください。",
+    "auth/wrong-password": "パスワードが違います。",
+    "auth/invalid-credential": "メールアドレスまたはパスワードが違います。",
+    "auth/too-many-requests": "試行回数が多すぎます。しばらく待ってからお試しください。",
+    "auth/network-request-failed": "ネットワークに接続できません。インターネット接続を確認してください。",
+  };
+  return map[code] || ("エラーが発生しました（" + code + "）");
+}
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    currentUser = { uid: user.uid, name: user.displayName || "名前未設定", email: user.email };
+    $("login-screen").classList.add("hidden");
+    $("app-screen").classList.remove("hidden");
+    $("header-user").textContent = currentUser.name + " さん";
+    requestNotificationPermission();
+    startListening();
+  } else {
+    currentUser = null;
+    if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+    if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+    $("app-screen").classList.add("hidden");
+    $("login-screen").classList.remove("hidden");
+  }
+});
+
+// ============================================================
+//  通知・アイコンバッジ
+// ============================================================
+function requestNotificationPermission() {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "default") {
+    Notification.requestPermission().catch(() => {});
+  }
+}
+
+// 自分宛の未読件数（自分が入力したものは除く）
+function unreadCountForMe() {
+  if (!currentUser) return 0;
+  return entries.filter((e) => e.authorUid !== currentUser.uid && !isReadByMe(e)).length;
+}
+
+// アプリアイコンの赤丸バッジを更新（対応端末のみ）
+function updateAppBadge() {
+  const n = unreadCountForMe();
+  if (navigator.setAppBadge) {
+    if (n > 0) navigator.setAppBadge(n).catch(() => {});
+    else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+  }
+}
+
+// 新規入力のポップアップ通知
+function notifyNewEntry(entry) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    new Notification("新しい業務連絡", {
+      body: entry.authorName + "さん：" + entry.comment,
+      icon: "icon-192.png",
+      tag: entry.id,
+    });
+  } catch (e) {}
+}
+
+// ============================================================
+//  データ購読
+// ============================================================
+let initialLoaded = false;
+function startListening() {
+  initialLoaded = false;
+  const q = query(collection(db, "entries"), orderBy("createdAt", "desc"));
+  unsubscribe = onSnapshot(q, (snap) => {
+    // 初回読込後の「新規追加」だけ通知（自分の入力は除く）
+    if (initialLoaded) {
+      snap.docChanges().forEach((ch) => {
+        if (ch.type === "added") {
+          const data = ch.doc.data();
+          if (data.authorUid !== currentUser?.uid) {
+            notifyNewEntry({ id: ch.doc.id, ...data });
+          }
+        }
+      });
+    }
+    initialLoaded = true;
+
+    entries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderSchedule();
+    renderNotice();
+    updateAppBadge();
+    if (activeModalEntry) {
+      const updated = entries.find((e) => e.id === activeModalEntry.id);
+      if (updated) {
+        activeModalEntry = updated;
+        const isEditing = !$("modal-edit").classList.contains("hidden");
+        if (!isEditing) {
+          $("modal-date").textContent = "📅 " + formatDateJp(updated.date);
+          $("modal-comment").textContent = updated.comment;
+        }
+        renderReadList(updated);
+      }
+    }
+  });
+}
+
+// ============================================================
+//  ホーム
+// ============================================================
+$("home-date").value = todayStr();
+
+$("btn-submit").addEventListener("click", async () => {
+  const date = $("home-date").value;
+  const comment = $("home-comment").value.trim();
+  if (!date) return alert("日付を選んでください");
+  if (!comment) return alert("コメントを入力してください");
+  try {
+    await addDoc(collection(db, "entries"), {
+      date, comment,
+      authorUid: currentUser.uid,
+      authorName: currentUser.name,
+      reads: [],
+      createdAt: serverTimestamp(),
+    });
+    $("home-comment").value = "";
+    const ok = $("home-success");
+    ok.classList.remove("hidden");
+    setTimeout(() => ok.classList.add("hidden"), 2500);
+  } catch (e) { alert("登録に失敗しました：" + e.message); }
+});
+
+// ============================================================
+//  タブ切替
+// ============================================================
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+});
+function switchTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  ["home", "schedule", "notice"].forEach((t) => $("tab-" + t).classList.toggle("hidden", t !== tab));
+  $("header-title").textContent = { home: "ホーム", schedule: "月間スケジュール", notice: "業務連絡" }[tab];
+}
+
+// ============================================================
+//  スケジュール
+// ============================================================
+let scheduleView = "calendar";
+$("toggle-calendar").addEventListener("click", () => setScheduleView("calendar"));
+$("toggle-list").addEventListener("click", () => setScheduleView("list"));
+function setScheduleView(v) {
+  scheduleView = v;
+  $("toggle-calendar").classList.toggle("active", v === "calendar");
+  $("toggle-list").classList.toggle("active", v === "list");
+  $("schedule-calendar").classList.toggle("hidden", v !== "calendar");
+  $("schedule-list").classList.toggle("hidden", v !== "list");
+  renderSchedule();
+}
+function renderSchedule() { scheduleView === "calendar" ? renderCalendar() : renderScheduleList(); }
+
+function renderCalendar() {
+  const wrap = $("schedule-calendar");
+  wrap.innerHTML = "";
+  const now = new Date();
+  for (let m = 0; m < 3; m++) wrap.appendChild(buildMonthCalendar(new Date(now.getFullYear(), now.getMonth() + m, 1)));
+}
+
+function buildMonthCalendar(base) {
+  const year = base.getFullYear(), month = base.getMonth();
+  const block = document.createElement("div"); block.className = "month-block";
+  const title = document.createElement("div"); title.className = "month-title";
+  title.textContent = `${year}年 ${month + 1}月`; block.appendChild(title);
+  const grid = document.createElement("div"); grid.className = "calendar-grid";
+  ["日","月","火","水","木","金","土"].forEach((w, i) => {
+    const h = document.createElement("div");
+    h.className = "cal-head" + (i === 0 ? " sun" : i === 6 ? " sat" : "");
+    h.textContent = w; grid.appendChild(h);
+  });
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let i = 0; i < firstDay; i++) {
+    const c = document.createElement("div"); c.className = "cal-cell empty"; grid.appendChild(c);
+  }
+  const todayString = todayStr();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${pad(month + 1)}-${pad(d)}`;
+    const cell = document.createElement("div");
+    cell.className = "cal-cell" + (dateStr === todayString ? " today" : "");
+    const dn = document.createElement("div"); dn.className = "cal-date"; dn.textContent = d; cell.appendChild(dn);
+    const dayEntries = entries.filter((e) => e.date === dateStr);
+    dayEntries.slice(0, 3).forEach((e) => {
+      const ev = document.createElement("div");
+      ev.className = "cal-event" + (isReadByMe(e) ? " read-done" : "");
+      ev.textContent = e.comment;
+      ev.addEventListener("click", (evt) => { evt.stopPropagation(); openModal(e); });
+      cell.appendChild(ev);
+    });
+    if (dayEntries.length > 3) {
+      const more = document.createElement("div"); more.className = "cal-event";
+      more.textContent = `他${dayEntries.length - 3}件`; cell.appendChild(more);
+    }
+    grid.appendChild(cell);
+  }
+  block.appendChild(grid); return block;
+}
+
+function renderScheduleList() {
+  const wrap = $("schedule-list"); wrap.innerHTML = "";
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 3, 0);
+  const inRange = entries.filter((e) => { const d = new Date(e.date); return d >= start && d <= end; })
+                         .sort((a, b) => a.date.localeCompare(b.date));
+  if (inRange.length === 0) { wrap.innerHTML = `<div class="empty-msg">表示する予定はありません。<br>ホームタブから登録できます。</div>`; return; }
+  inRange.forEach((e) => {
+    const item = document.createElement("div");
+    item.className = "list-item" + (isReadByMe(e) ? " read-done" : "");
+    item.innerHTML = `<div class="list-date">${formatDateJp(e.date)}</div><div class="list-comment">${escapeHtml(e.comment)}</div><div class="list-meta"><span>入力：${escapeHtml(e.authorName)}</span><span class="${isReadByMe(e) ? "read-badge" : ""}">${readSummary(e)}</span></div>`;
+    item.addEventListener("click", () => openModal(e));
+    wrap.appendChild(item);
+  });
+}
+
+// ============================================================
+//  業務連絡
+// ============================================================
+function renderNotice() {
+  const wrap = $("notice-list"); wrap.innerHTML = "";
+  if (entries.length === 0) { wrap.innerHTML = `<div class="empty-msg">業務連絡はまだありません。<br>ホームタブから登録できます。</div>`; return; }
+  entries.forEach((e) => {
+    const item = document.createElement("div");
+    item.className = "notice-item" + (isReadByMe(e) ? " read-done" : "");
+    item.innerHTML = `<div class="notice-top"><span class="notice-author">${escapeHtml(e.authorName)}</span><span>${formatTimestamp(e.createdAt)}</span></div><div class="notice-comment">${escapeHtml(e.comment)}</div><div class="notice-bottom"><span>対象日：${formatDateJp(e.date)}</span><span class="${isReadByMe(e) ? "read-badge" : ""}">${readSummary(e)}</span></div>`;
+    item.addEventListener("click", () => openModal(e));
+    wrap.appendChild(item);
+  });
+}
+
+// ============================================================
+//  モーダル
+// ============================================================
+function openModal(entry) {
+  activeModalEntry = entry;
+  $("modal-date").textContent = "📅 " + formatDateJp(entry.date);
+  $("modal-comment").textContent = entry.comment;
+  $("modal-author").textContent = "入力者：" + entry.authorName;
+  $("btn-edit").classList.toggle("hidden", entry.authorUid !== currentUser?.uid);
+  $("modal-view").classList.remove("hidden");
+  $("modal-edit").classList.add("hidden");
+  renderReadList(entry);
+  $("modal").classList.remove("hidden");
+}
+
+$("btn-edit").addEventListener("click", () => {
+  if (!activeModalEntry) return;
+  $("edit-date").value = activeModalEntry.date;
+  $("edit-comment").value = activeModalEntry.comment;
+  $("modal-view").classList.add("hidden");
+  $("modal-edit").classList.remove("hidden");
+});
+$("btn-cancel-edit").addEventListener("click", () => {
+  $("modal-view").classList.remove("hidden");
+  $("modal-edit").classList.add("hidden");
+});
+$("btn-save-edit").addEventListener("click", async () => {
+  if (!activeModalEntry) return;
+  const date = $("edit-date").value;
+  const comment = $("edit-comment").value.trim();
+  if (!date) return alert("日付を選んでください");
+  if (!comment) return alert("コメントを入力してください");
+  try {
+    await updateDoc(doc(db, "entries", activeModalEntry.id), { date, comment });
+    $("modal-view").classList.remove("hidden");
+    $("modal-edit").classList.add("hidden");
+  } catch (e) { alert("保存に失敗しました：" + e.message); }
+});
+
+function renderReadList(entry) {
+  const reads = entry.reads || [];
+  const list = $("read-list"); list.innerHTML = "";
+  if (reads.length === 0) { list.innerHTML = `<span class="read-none">まだ誰も確認していません</span>`; }
+  else { reads.forEach((r) => { const chip = document.createElement("span"); chip.className = "read-chip"; chip.textContent = "✓ " + r.name; list.appendChild(chip); }); }
+  const btn = $("btn-read");
+  if (isReadByMe(entry)) { btn.textContent = "✓ 確認済みです"; btn.classList.add("btn-read-done"); btn.disabled = true; }
+  else { btn.textContent = "✓ 確認しました（既読）"; btn.classList.remove("btn-read-done"); btn.disabled = false; }
+}
+
+$("btn-read").addEventListener("click", async () => {
+  if (!activeModalEntry || isReadByMe(activeModalEntry)) return;
+  try {
+    await updateDoc(doc(db, "entries", activeModalEntry.id), { reads: arrayUnion({ uid: currentUser.uid, name: currentUser.name }) });
+  } catch (e) { alert("既読の登録に失敗しました：" + e.message); }
+});
+
+$("btn-close-modal").addEventListener("click", () => { $("modal").classList.add("hidden"); activeModalEntry = null; });
+$("modal").addEventListener("click", (e) => { if (e.target === $("modal")) { $("modal").classList.add("hidden"); activeModalEntry = null; } });
+
+// ============================================================
+//  ユーティリティ
+// ============================================================
+function isReadByMe(entry) { return (entry.reads || []).some((r) => r.uid === currentUser?.uid); }
+function readSummary(entry) { const n = (entry.reads || []).length; return n === 0 ? "既読 0" : `既読 ${n}`; }
+function pad(n) { return String(n).padStart(2, "0"); }
+function todayStr() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function formatDateJp(dateStr) {
+  if (!dateStr) return "";
+  const [y, m, d] = dateStr.split("-");
+  const wd = ["日","月","火","水","木","金","土"][new Date(dateStr).getDay()];
+  return `${y}年${Number(m)}月${Number(d)}日(${wd})`;
+}
+function formatTimestamp(ts) {
+  if (!ts || !ts.toDate) return "";
+  const d = ts.toDate();
+  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function escapeHtml(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>

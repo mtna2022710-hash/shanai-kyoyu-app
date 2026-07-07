@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // entries（予定・業務連絡）コレクション
+    match /entries/{entryId} {
+
+      // 読み取り：ログイン済みユーザーのみ
+      allow read: if request.auth != null;
+
+      // 新規作成：ログイン済み かつ 入力者が本人であること
+      allow create: if request.auth != null
+                    && request.resource.data.authorUid == request.auth.uid
+                    && request.resource.data.comment is string
+                    && request.resource.data.comment.size() > 0
+                    && request.resource.data.date is string;
+
+      // 更新：以下のいずれか
+      //  A) 既読の追記など（本文・日付・入力者は変更しない）→ ログイン済み全員OK
+      //  B) 入力した本人による編集（本文・日付の訂正）→ 入力者本人のみOK
+      allow update: if request.auth != null && (
+                      (
+                        request.resource.data.comment == resource.data.comment
+                        && request.resource.data.date == resource.data.date
+                        && request.resource.data.authorUid == resource.data.authorUid
+                      )
+                      ||
+                      (
+                        resource.data.authorUid == request.auth.uid
+                        && request.resource.data.authorUid == resource.data.authorUid
+                      )
+                    );
+
+      // 削除：入力者本人のみ
+      allow delete: if request.auth != null
+                    && resource.data.authorUid == request.auth.uid;
+    }
+  }
+}
