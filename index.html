@@ -43,10 +43,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
 .home-success { text-align: center; color: var(--green); font-weight: 700; margin-top: 14px; font-size: 16px; }
 .month-block { margin-bottom: 28px; }
 .month-title { font-size: 18px; font-weight: 700; color: var(--blue-dark); margin-bottom: 10px; padding-left: 4px; }
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cal-nav-title { font-size: 20px; font-weight: 700; color: var(--blue-dark); }
+.cal-nav-btn { background: #fff; color: var(--blue); border: 2px solid var(--blue); border-radius: 10px; font-size: 16px; font-weight: 700; padding: 8px 18px; cursor: pointer; font-family: inherit; }
+.cal-nav-btn:disabled { opacity: .25; cursor: default; }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .cal-head { background: var(--blue-light); text-align: center; font-size: 12px; font-weight: 700; padding: 6px 0; color: var(--blue-dark); }
 .cal-head.sun { color: var(--red); } .cal-head.sat { color: var(--blue); }
-.cal-cell { background: #fff; min-height: 64px; padding: 4px; font-size: 12px; cursor: pointer; }
+.cal-cell { background: #fff; min-height: clamp(64px, 11vh, 120px); padding: 4px; font-size: 12px; cursor: pointer; }
 .cal-cell.empty { background: #fafafa; cursor: default; }
 .cal-cell.today { background: #fffbe6; }
 .cal-date { font-size: 12px; font-weight: 700; color: var(--gray); }
@@ -143,6 +147,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
     </section>
     <!-- スケジュール（カレンダー表示） -->
     <section id="tab-schedule" class="tab-panel hidden">
+      <div class="cal-nav">
+        <button id="cal-prev" class="cal-nav-btn">◀</button>
+        <span id="cal-title" class="cal-nav-title"></span>
+        <button id="cal-next" class="cal-nav-btn">▶</button>
+      </div>
       <div id="schedule-calendar"></div>
     </section>
     <!-- 業務連絡 -->
@@ -503,18 +512,44 @@ function switchTab(tab) {
 // ============================================================
 function renderSchedule() { renderCalendar(); }
 
+// 表示中の月（0=当月、1=翌月）。当月＋翌月の2ヶ月分を表示可能
+let calOffset = 0;
+const CAL_MAX = 1;
+
 function renderCalendar() {
   const wrap = $("schedule-calendar");
   wrap.innerHTML = "";
   const now = new Date();
-  for (let m = 0; m < 3; m++) wrap.appendChild(buildMonthCalendar(new Date(now.getFullYear(), now.getMonth() + m, 1)));
+  const base = new Date(now.getFullYear(), now.getMonth() + calOffset, 1);
+  $("cal-title").textContent = `${base.getFullYear()}年 ${base.getMonth() + 1}月`;
+  $("cal-prev").disabled = calOffset <= 0;
+  $("cal-next").disabled = calOffset >= CAL_MAX;
+  wrap.appendChild(buildMonthCalendar(base));
 }
+
+$("cal-prev").addEventListener("click", () => { if (calOffset > 0) { calOffset--; renderCalendar(); } });
+$("cal-next").addEventListener("click", () => { if (calOffset < CAL_MAX) { calOffset++; renderCalendar(); } });
+
+// スワイプで月送り（右スワイプ=翌月、左スワイプ=前月）
+let swipeX = null, swipeY = null;
+$("schedule-calendar").addEventListener("touchstart", (e) => {
+  swipeX = e.touches[0].clientX; swipeY = e.touches[0].clientY;
+}, { passive: true });
+$("schedule-calendar").addEventListener("touchend", (e) => {
+  if (swipeX === null) return;
+  const dx = e.changedTouches[0].clientX - swipeX;
+  const dy = e.changedTouches[0].clientY - swipeY;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 0 && calOffset < CAL_MAX) calOffset++;
+    else if (dx < 0 && calOffset > 0) calOffset--;
+    renderCalendar();
+  }
+  swipeX = null; swipeY = null;
+}, { passive: true });
 
 function buildMonthCalendar(base) {
   const year = base.getFullYear(), month = base.getMonth();
   const block = document.createElement("div"); block.className = "month-block";
-  const title = document.createElement("div"); title.className = "month-title";
-  title.textContent = `${year}年 ${month + 1}月`; block.appendChild(title);
   const grid = document.createElement("div"); grid.className = "calendar-grid";
   ["日","月","火","水","木","金","土"].forEach((w, i) => {
     const h = document.createElement("div");
