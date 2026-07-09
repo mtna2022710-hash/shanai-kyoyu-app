@@ -1,5 +1,5 @@
 // ============================================================
-//  社内共有アプリ  プッシュ通知送信（Cloud Functions）
+//  Olinks  プッシュ通知送信（Cloud Functions）
 //  entries の新規作成・コメント追加を検知して全端末へ送信
 // ============================================================
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");

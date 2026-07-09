@@ -1,6 +1,6 @@
 {
-  "name": "社内共有アプリ",
-  "short_name": "社内共有",
+  "name": "Olinks",
+  "short_name": "Olinks",
   "description": "スケジュール・タスク・業務連絡を共有するアプリ",
   "start_url": "./index.html",
   "display": "standalone",

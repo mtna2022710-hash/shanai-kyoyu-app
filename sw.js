@@ -1,6 +1,6 @@
 // シンプルなサービスワーカー（PWAインストール対応）
 // 方式：ネットワーク優先（オンライン時は常に最新を取得、オフライン時のみキャッシュ）
-const CACHE = "shanai-app-v4";
+const CACHE = "shanai-app-v5";
 const ASSETS = [
   "./",
   "./index.html",
@@ -44,7 +44,7 @@ self.addEventListener("push", (e) => {
   let payload = {};
   try { payload = e.data.json(); } catch (err) {}
   const d = payload.data || {};
-  const title = d.title || "社内共有アプリ";
+  const title = d.title || "Olinks";
   const body = d.body || "";
   e.waitUntil((async () => {
     await self.registration.showNotification(title, {
