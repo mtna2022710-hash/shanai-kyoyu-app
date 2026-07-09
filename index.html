@@ -50,7 +50,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .cal-head { background: var(--blue-light); text-align: center; font-size: 12px; font-weight: 700; padding: 6px 0; color: var(--blue-dark); }
 .cal-head.sun { color: var(--red); } .cal-head.sat { color: var(--blue); }
-.cal-cell { background: #fff; min-height: clamp(64px, 11vh, 120px); padding: 4px; font-size: 12px; cursor: pointer; }
+.cal-cell { background: #fff; min-height: 64px; padding: 4px; font-size: 12px; cursor: pointer; }
 .cal-cell.empty { background: #fafafa; cursor: default; }
 .cal-cell.today { background: #fffbe6; }
 .cal-date { font-size: 12px; font-weight: 700; color: var(--gray); }
@@ -167,6 +167,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
 </div>
 
 <!-- ===== モーダル ===== -->
+<!-- ===== その日のタスク一覧モーダル ===== -->
+<div id="day-modal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-date" id="day-modal-date"></div>
+    <div id="day-task-list" style="margin-top: 12px;"></div>
+    <button id="btn-close-day" class="btn-ghost btn-large">閉じる</button>
+  </div>
+</div>
+
 <div id="modal" class="modal hidden">
   <div class="modal-card">
     <div id="modal-view">
@@ -452,6 +461,7 @@ function startListening() {
     renderSchedule();
     renderNotice();
     updateAppBadge();
+    if (activeDayDate && !$("day-modal").classList.contains("hidden")) renderDayList(activeDayDate);
     if (activeModalEntry) {
       const updated = entries.find((e) => e.id === activeModalEntry.id);
       if (updated) {
@@ -572,13 +582,14 @@ function buildMonthCalendar(base) {
       const ev = document.createElement("div");
       ev.className = "cal-event" + (isReadByMe(e) ? " read-done" : "");
       ev.textContent = e.comment;
-      ev.addEventListener("click", (evt) => { evt.stopPropagation(); openModal(e); });
       cell.appendChild(ev);
     });
     if (dayEntries.length > 3) {
       const more = document.createElement("div"); more.className = "cal-event";
       more.textContent = `他${dayEntries.length - 3}件`; cell.appendChild(more);
     }
+    // 日付タップでその日のタスク一覧を表示
+    cell.addEventListener("click", () => openDayModal(dateStr));
     grid.appendChild(cell);
   }
   block.appendChild(grid); return block;
@@ -698,6 +709,36 @@ async function sendComment() {
   } catch (e) { alert("コメントの送信に失敗しました：" + e.message); }
   btn.disabled = false;
 }
+
+// ---- その日のタスク一覧モーダル ----
+let activeDayDate = null;
+function openDayModal(dateStr) {
+  activeDayDate = dateStr;
+  renderDayList(dateStr);
+  $("day-modal").classList.remove("hidden");
+}
+function renderDayList(dateStr) {
+  $("day-modal-date").textContent = "📅 " + formatDateJp(dateStr);
+  const list = $("day-task-list"); list.innerHTML = "";
+  const dayEntries = entries.filter((e) => e.date === dateStr);
+  if (dayEntries.length === 0) {
+    list.innerHTML = `<div class="empty-msg">この日の予定はありません</div>`;
+    return;
+  }
+  dayEntries.forEach((e) => {
+    const item = document.createElement("div");
+    item.className = "notice-item" + (isReadByMe(e) ? " read-done" : "");
+    item.innerHTML = `<div class="notice-top"><span class="notice-author">${escapeHtml(e.authorName)}</span><span>${formatTimestamp(e.createdAt)}</span></div><div class="notice-comment">${escapeHtml(e.comment)}</div><div class="notice-bottom"><span>${(e.comments || []).length > 0 ? `💬 ${(e.comments || []).length}　` : ""}</span><span class="${isReadByMe(e) ? "read-badge" : ""}">${readSummary(e)}</span></div>`;
+    item.addEventListener("click", () => {
+      $("day-modal").classList.add("hidden");
+      activeDayDate = null;
+      openModal(e);
+    });
+    list.appendChild(item);
+  });
+}
+$("btn-close-day").addEventListener("click", () => { $("day-modal").classList.add("hidden"); activeDayDate = null; });
+$("day-modal").addEventListener("click", (e) => { if (e.target === $("day-modal")) { $("day-modal").classList.add("hidden"); activeDayDate = null; } });
 
 $("btn-close-modal").addEventListener("click", () => { $("modal").classList.add("hidden"); activeModalEntry = null; });
 $("modal").addEventListener("click", (e) => { if (e.target === $("modal")) { $("modal").classList.add("hidden"); activeModalEntry = null; } });
