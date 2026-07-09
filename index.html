@@ -47,16 +47,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
 .cal-nav-title { font-size: 20px; font-weight: 700; color: var(--blue-dark); }
 .cal-nav-btn { background: #fff; color: var(--blue); border: 2px solid var(--blue); border-radius: 10px; font-size: 16px; font-weight: 700; padding: 8px 18px; cursor: pointer; font-family: inherit; }
 .cal-nav-btn:disabled { opacity: .25; cursor: default; }
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .cal-head { background: var(--blue-light); text-align: center; font-size: 12px; font-weight: 700; padding: 6px 0; color: var(--blue-dark); }
 .cal-head.sun { color: var(--red); } .cal-head.sat { color: var(--blue); }
-.cal-cell { background: #fff; min-height: 64px; padding: 4px; font-size: 12px; cursor: pointer; }
+.cal-cell { background: #fff; min-height: 64px; padding: 4px; font-size: 12px; cursor: pointer; min-width: 0; overflow: hidden; }
 .cal-cell.empty { background: #fafafa; cursor: default; }
 .cal-cell.today { background: #fffbe6; }
 .cal-date { font-size: 12px; font-weight: 700; color: var(--gray); }
 .cal-cell.today .cal-date { color: var(--orange); }
 .cal-event { background: #fee2e2; color: var(--red); border-radius: 5px; padding: 2px 4px; margin-top: 2px; font-size: 11px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .cal-event.read-done { background: #f3f4f6; color: var(--gray); }
+.cal-count { display: none; margin-top: 4px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; border-radius: 10px; padding: 1px 7px; width: fit-content; }
+.cal-count.all-read { background: #9ca3af; }
+@media (max-width: 600px) {
+  .cal-event { display: none; }
+  .cal-count { display: inline-block; }
+}
 .read-badge { color: var(--gray); font-weight: 700; }
 .empty-msg { text-align: center; color: var(--gray); padding: 40px 20px; font-size: 15px; }
 .notice-item { background: #fff; border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.06); cursor: pointer; border-left: 5px solid var(--red); }
@@ -587,6 +593,13 @@ function buildMonthCalendar(base) {
     if (dayEntries.length > 3) {
       const more = document.createElement("div"); more.className = "cal-event";
       more.textContent = `他${dayEntries.length - 3}件`; cell.appendChild(more);
+    }
+    // スマホ用：件数バッジ（全て既読ならグレー、未読があれば赤）
+    if (dayEntries.length > 0) {
+      const cnt = document.createElement("div");
+      cnt.className = "cal-count" + (dayEntries.every((e) => isReadByMe(e)) ? " all-read" : "");
+      cnt.textContent = `${dayEntries.length}件`;
+      cell.appendChild(cnt);
     }
     // 日付タップでその日のタスク一覧を表示
     cell.addEventListener("click", () => openDayModal(dateStr));
