@@ -66,6 +66,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
 .tab-btn.active { color: var(--blue); }
 .tab-icon { font-size: 22px; }
 .tab-label { font-size: 11px; font-weight: 700; }
+.btn-bell { position: relative; flex-shrink: 0; background: none; border: none; font-size: 22px; cursor: pointer; padding: 2px 4px; line-height: 1; font-family: inherit; }
+.bell-badge { position: absolute; top: -4px; right: -6px; min-width: 18px; height: 18px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; box-sizing: border-box; }
 .btn-logout { flex-shrink: 0; background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.6); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
 .btn-logout:active { background: rgba(255,255,255,.35); }
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
@@ -121,6 +123,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Goth
     <span class="header-title" id="header-title">ホーム</span>
     <div class="header-right">
       <span class="header-user" id="header-user"></span>
+      <button id="btn-bell" class="btn-bell" title="未読の業務連絡">🔔<span id="bell-badge" class="bell-badge hidden"></span></button>
       <button id="btn-logout" class="btn-logout">ログアウト</button>
     </div>
   </header>
@@ -267,6 +270,7 @@ $("btn-reset").addEventListener("click", async () => {
 });
 
 $("btn-logout").addEventListener("click", () => signOut(auth));
+$("btn-bell").addEventListener("click", () => switchTab("notice"));
 
 function showLoginError(msg) { $("login-error").textContent = msg; }
 
@@ -361,9 +365,14 @@ function unreadCountForMe() {
   ).length;
 }
 
-// アプリアイコンの赤丸バッジを更新（対応端末のみ）
+// アプリアイコンとヘッダーの鐘の未読バッジを更新
 function updateAppBadge() {
   const n = unreadCountForMe();
+  const bell = $("bell-badge");
+  if (bell) {
+    bell.textContent = n > 99 ? "99+" : String(n);
+    bell.classList.toggle("hidden", n === 0);
+  }
   if (navigator.setAppBadge) {
     if (n > 0) navigator.setAppBadge(n).catch(() => {});
     else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
