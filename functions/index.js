@@ -17,6 +17,7 @@ async function sendToAll(excludeUid, title, body, tag) {
   const tokens = snap.docs
     .filter((d) => d.data().uid !== excludeUid)
     .map((d) => d.id);
+  console.log(`登録トークン総数=${snap.size} 送信対象=${tokens.length}`);
   if (tokens.length === 0) return;
 
   const res = await getMessaging().sendEachForMulticast({
@@ -24,6 +25,8 @@ async function sendToAll(excludeUid, title, body, tag) {
     data: { title, body, tag },
     webpush: { headers: { Urgency: "high", TTL: "86400" } },
   });
+  console.log(`送信結果: 成功=${res.successCount} 失敗=${res.failureCount}`);
+  res.responses.forEach((r, i) => { if (!r.success) console.log(`失敗[${i}]: ${r.error?.code} ${r.error?.message}`); });
 
   // 無効になったトークンを掃除
   const deletions = [];
